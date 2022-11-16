@@ -1,0 +1,62 @@
+from bs4 import BeautifulSoup
+import urllib.request
+import requests
+import pandas as pd
+
+word = input("Enter the website name")
+keywords = word.lower().replace(" ", "+" )
+
+i = 1
+search_result_url = []
+
+for x in range(5):
+    URL = "https://ebay.co.uk/sch/i.html?_nkw=" + keywords + "&_pgn=" + str(i)
+    i = i+1
+    search_result_url.append(URL)
+
+page = requests.get(item_url)
+soup = BeautifulSoup(page.content, "html.parser")
+block = soup.find('div', class_='srp-river-results clearfix')
+items = block.findAll('a', class_='s-item__link')
+item_urls = []
+
+for item in items:
+    link = item.get('href')
+    link_clear = link.split('?', 1)[0]
+    item_urls.append(link_clear)
+        
+print(item_urls)
+
+item_list = []
+i = 1
+for item in item_urls:
+    page = requests.get(item)
+    soup = BeautifulSoup(page.content, "html.parser")
+    
+    title = soup.find('h1').text
+    price = soup.find('div', class_="x-price-primary").text.replace(' each','')
+    seller = soup.find('span', class_="ux-textspans ux-textspans--PSEUDOLINK ux-textspans--BOLD").text
+    try:
+        sold = soup.find('a', class_="vi-txt-underline").text.replace(' sold','')
+    except:
+        sold = 0
+    
+    items = {
+        'Rank' : i,
+        'Title' : title,
+        'Price' : price,
+        'Seller' : seller,
+        'Sold' : sold
+        
+    }
+    item_list.append(items)
+    print(i, seller, title)
+    i = i + 1
+
+print(len(item_list)) 
+
+save = input("Do you want to save the listing? (Y or N)")
+
+if save == 'y':
+    df = pd.DataFrame(item_list)
+    df.to_csv(keywords +'-ranking.csv') 
